@@ -1,0 +1,18 @@
+{
+    "name": "hotel/reservation-system",
+    "description": "Event Sourced Hotel Reservation System",
+    "type": "project",
+    "require": {
+        "php": "^8.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Hotel\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Hotel\\Tests\\": "tests/"
+        }
+    }
+}
