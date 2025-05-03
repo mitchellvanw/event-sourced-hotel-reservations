@@ -2,16 +2,15 @@
 
 namespace Maintenance\DomainEvent;
 
-class MaintenanceRequested
+class TaskAssigned
 {
     private \DateTimeImmutable $occurredAt;
 
     public function __construct(
         private string $taskId,
-        private string $roomId,
-        private string $issue,
-        private string $priority,
-        private ?\DateTimeImmutable $scheduledFor = null,
+        private string $taskType,
+        private string $assignedTo,
+        private ?string $notes = null,
         ?\DateTimeImmutable $occurredAt = null
     ) {
         $this->occurredAt = $occurredAt ?? new \DateTimeImmutable();
@@ -22,24 +21,19 @@ class MaintenanceRequested
         return $this->taskId;
     }
 
-    public function roomId(): string
+    public function taskType(): string
     {
-        return $this->roomId;
+        return $this->taskType;
     }
 
-    public function issue(): string
+    public function assignedTo(): string
     {
-        return $this->issue;
+        return $this->assignedTo;
     }
 
-    public function priority(): string
+    public function notes(): ?string
     {
-        return $this->priority;
-    }
-
-    public function scheduledFor(): ?\DateTimeImmutable
-    {
-        return $this->scheduledFor;
+        return $this->notes;
     }
 
     public function occurredAt(): \DateTimeImmutable

@@ -9,6 +9,9 @@ use App\Reservation\DomainEvent\BookingConfirmed;
 use App\Reservation\DomainEvent\BookingModified;
 use App\Reservation\DomainEvent\BookingCancelled;
 use App\Reservation\DomainEvent\NoShowRecorded;
+use App\Reservation\DomainEvent\BookingFulfilled;
+use App\Reservation\DomainEvent\SpecialRequestAdded;
+use App\Reservation\DomainEvent\BookingAmended;
 
 final class Booking
 {
@@ -20,9 +23,12 @@ final class Booking
         private \DateTimeImmutable $checkOutDate,
         private string $status = 'created',
         private ?string $notes = null,
+        private array $specialRequests = [],
+        private ?StayId $stayId = null,
         private ?\DateTimeImmutable $confirmedAt = null,
         private ?\DateTimeImmutable $cancelledAt = null,
         private ?\DateTimeImmutable $noShowRecordedAt = null,
+        private ?\DateTimeImmutable $fulfilledAt = null,
     ) {
     }
 
@@ -84,8 +90,8 @@ final class Booking
             throw new \DomainException('Booking is already cancelled');
         }
 
-        if ($this->status === 'checked_in' || $this->status === 'checked_out' || $this->status === 'no_show') {
-            throw new \DomainException('Cannot cancel booking after check-in, check-out, or no-show');
+        if ($this->status === 'checked_in' || $this->status === 'checked_out' || $this->status === 'no_show' || $this->status === 'fulfilled') {
+            throw new \DomainException('Cannot cancel booking after check-in, check-out, no-show, or fulfillment');
         }
 
         $event = new BookingCancelled(
@@ -104,6 +110,59 @@ final class Booking
 
         $event = new NoShowRecorded(
             $this->id->toString(),
+            new \DateTimeImmutable(),
+        );
+
+        return [$event];
+    }
+
+    public function fulfill(StayId $stayId): array
+    {
+        if ($this->status !== 'confirmed') {
+            throw new \DomainException('Can only fulfill confirmed bookings');
+        }
+
+        if ($this->status === 'fulfilled') {
+            throw new \DomainException('Booking is already fulfilled');
+        }
+
+        $event = new BookingFulfilled(
+            $this->id->toString(),
+            $stayId->toString(),
+            new \DateTimeImmutable(),
+        );
+
+        return [$event];
+    }
+
+    public function addSpecialRequest(string $requestType, string $requestDetails): array
+    {
+        if ($this->status === 'cancelled' || $this->status === 'no_show') {
+            throw new \DomainException('Cannot add special requests to cancelled or no-show bookings');
+        }
+
+        $event = new SpecialRequestAdded(
+            $this->id->toString(),
+            $requestType,
+            $requestDetails,
+            'pending',
+            new \DateTimeImmutable(),
+        );
+
+        return [$event];
+    }
+
+    public function amend(string $amendmentType, string $amendmentDetails, string $amendedBy): array
+    {
+        if ($this->status === 'cancelled' || $this->status === 'no_show') {
+            throw new \DomainException('Cannot amend cancelled or no-show bookings');
+        }
+
+        $event = new BookingAmended(
+            $this->id->toString(),
+            $amendmentType,
+            $amendmentDetails,
+            $amendedBy,
             new \DateTimeImmutable(),
         );
 
@@ -133,7 +192,12 @@ final class Booking
             $this->checkOutDate,
             'confirmed',
             $this->notes,
+            $this->specialRequests,
+            $this->stayId,
             $event->timestamp,
+            $this->cancelledAt,
+            $this->noShowRecordedAt,
+            $this->fulfilledAt,
         );
     }
 
@@ -147,9 +211,12 @@ final class Booking
             $event->checkOutDate,
             $this->status,
             $event->notes,
+            $this->specialRequests,
+            $this->stayId,
             $this->confirmedAt,
             $this->cancelledAt,
             $this->noShowRecordedAt,
+            $this->fulfilledAt,
         );
     }
 
@@ -163,9 +230,12 @@ final class Booking
             $this->checkOutDate,
             'cancelled',
             $this->notes,
+            $this->specialRequests,
+            $this->stayId,
             $this->confirmedAt,
             $event->timestamp,
             $this->noShowRecordedAt,
+            $this->fulfilledAt,
         );
     }
 
@@ -179,9 +249,65 @@ final class Booking
             $this->checkOutDate,
             'no_show',
             $this->notes,
+            $this->specialRequests,
+            $this->stayId,
             $this->confirmedAt,
             $this->cancelledAt,
             $event->timestamp,
+            $this->fulfilledAt,
         );
+    }
+
+    public function applyBookingFulfilled(BookingFulfilled $event): self
+    {
+        return new self(
+            $this->id,
+            $this->guestId,
+            $this->roomId,
+            $this->checkInDate,
+            $this->checkOutDate,
+            'fulfilled',
+            $this->notes,
+            $this->specialRequests,
+            StayId::fromString($event->stayId),
+            $this->confirmedAt,
+            $this->cancelledAt,
+            $this->noShowRecordedAt,
+            $event->timestamp,
+        );
+    }
+
+    public function applySpecialRequestAdded(SpecialRequestAdded $event): self
+    {
+        $specialRequests = $this->specialRequests;
+        $specialRequests[] = [
+            'type' => $event->requestType,
+            'details' => $event->requestDetails,
+            'status' => $event->status,
+            'timestamp' => $event->timestamp,
+        ];
+
+        return new self(
+            $this->id,
+            $this->guestId,
+            $this->roomId,
+            $this->checkInDate,
+            $this->checkOutDate,
+            $this->status,
+            $this->notes,
+            $specialRequests,
+            $this->stayId,
+            $this->confirmedAt,
+            $this->cancelledAt,
+            $this->noShowRecordedAt,
+            $this->fulfilledAt,
+        );
+    }
+
+    public function applyBookingAmended(BookingAmended $event): self
+    {
+        // For administrative amendments, we don't change core booking data,
+        // but we might want to track them in an amendments log in a real system
+        return $this;
     }
 }

@@ -1,18 +1,55 @@
 <?php
 
-declare(strict_types=1);
+namespace Accommodation\DomainEvent;
 
-namespace App\Accommodation\DomainEvent;
-
-final readonly class RoomCreated
+class RoomCreated
 {
+    private \DateTimeImmutable $occurredAt;
+
     public function __construct(
-        public string $roomId,
-        public string $roomNumber,
-        public string $type,
-        public float $rate,
-        public string $status,
-        public \DateTimeImmutable $timestamp,
+        private string $roomId,
+        private string $roomNumber,
+        private string $type,
+        private float $rate,
+        private string $status,
+        private array $features = [],
+        ?\DateTimeImmutable $occurredAt = null
     ) {
+        $this->occurredAt = $occurredAt ?? new \DateTimeImmutable();
+    }
+
+    public function roomId(): string
+    {
+        return $this->roomId;
+    }
+
+    public function roomNumber(): string
+    {
+        return $this->roomNumber;
+    }
+
+    public function type(): string
+    {
+        return $this->type;
+    }
+
+    public function rate(): float
+    {
+        return $this->rate;
+    }
+
+    public function status(): string
+    {
+        return $this->status;
+    }
+
+    public function features(): array
+    {
+        return $this->features;
+    }
+
+    public function occurredAt(): \DateTimeImmutable
+    {
+        return $this->occurredAt;
     }
 }
