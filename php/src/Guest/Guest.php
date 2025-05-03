@@ -4,98 +4,103 @@ declare(strict_types=1);
 
 namespace App\Guest;
 
-final readonly class Guest
+use App\Guest\DomainEvent\GuestRegistered;
+use App\Guest\DomainEvent\GuestProfileUpdated;
+use App\Guest\DomainEvent\GuestPreferencesUpdated;
+
+final class Guest
 {
-    private string $guestId;
-    private string $name;
-    private string $email;
-    private ?string $phone;
-    private array $preferences;
-    
-    private function __construct(string $guestId)
-    {
-        $this->guestId = $guestId;
+    private function __construct(
+        private GuestId $id,
+        private string $name,
+        private string $email,
+        private ?string $phone,
+        private array $preferences
+    ) {
     }
     
     public static function register(
-        string $guestId,
+        GuestId $id,
         string $name,
         string $email,
         ?string $phone = null,
         array $preferences = []
     ): array {
-        $guest = new self($guestId);
         $event = new GuestRegistered(
-            guestId: $guestId,
-            name: $name,
-            email: $email,
-            phone: $phone,
-            preferences: $preferences,
-            timestamp: new \DateTimeImmutable(),
+            $id->toString(),
+            $name,
+            $email,
+            $phone,
+            $preferences,
+            new \DateTimeImmutable()
         );
         
-        return [$guest->applyGuestRegistered($event), $event];
+        return [$event];
     }
     
     public function updateProfile(string $name, string $email, ?string $phone): array
     {
         if ($this->name === $name && $this->email === $email && $this->phone === $phone) {
-            return [$this, null];
+            return [];
         }
         
         $event = new GuestProfileUpdated(
-            guestId: $this->guestId,
-            name: $name,
-            email: $email,
-            phone: $phone,
-            timestamp: new \DateTimeImmutable(),
+            $this->id->toString(),
+            $name,
+            $email,
+            $phone,
+            new \DateTimeImmutable()
         );
         
-        return [$this->applyGuestProfileUpdated($event), $event];
+        return [$event];
     }
     
-    public function changePreferences(array $preferences): array
+    public function updatePreferences(array $preferences): array
     {
         if ($this->preferences === $preferences) {
-            return [$this, null];
+            return [];
         }
         
-        $event = new GuestPreferencesChanged(
-            guestId: $this->guestId,
-            oldPreferences: $this->preferences,
-            newPreferences: $preferences,
-            timestamp: new \DateTimeImmutable(),
+        $event = new GuestPreferencesUpdated(
+            $this->id->toString(),
+            $this->preferences,
+            $preferences,
+            new \DateTimeImmutable()
         );
         
-        return [$this->applyGuestPreferencesChanged($event), $event];
+        return [$event];
     }
     
     public function applyGuestRegistered(GuestRegistered $event): self
     {
-        $guest = clone $this;
-        $guest->name = $event->name;
-        $guest->email = $event->email;
-        $guest->phone = $event->phone;
-        $guest->preferences = $event->preferences;
-        
-        return $guest;
+        return new self(
+            GuestId::fromString($event->guestId),
+            $event->name,
+            $event->email,
+            $event->phone,
+            $event->preferences
+        );
     }
     
     public function applyGuestProfileUpdated(GuestProfileUpdated $event): self
     {
-        $guest = clone $this;
-        $guest->name = $event->name;
-        $guest->email = $event->email;
-        $guest->phone = $event->phone;
-        
-        return $guest;
+        return new self(
+            $this->id,
+            $event->name,
+            $event->email,
+            $event->phone,
+            $this->preferences
+        );
     }
     
-    public function applyGuestPreferencesChanged(GuestPreferencesChanged $event): self
+    public function applyGuestPreferencesUpdated(GuestPreferencesUpdated $event): self
     {
-        $guest = clone $this;
-        $guest->preferences = $event->newPreferences;
-        
-        return $guest;
+        return new self(
+            $this->id,
+            $this->name,
+            $this->email,
+            $this->phone,
+            $event->newPreferences
+        );
     }
 }
