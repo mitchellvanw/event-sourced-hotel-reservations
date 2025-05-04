@@ -16,81 +16,52 @@ Event sourcing is an architectural pattern where:
 
 ## Domain Model and Ubiquitous Language
 
-The system is organized around the following bounded contexts, each with its own domain language:
+The system is organized around the following bounded contexts, each with its own domain language. Each bounded context has a detailed description in its `BOUNDED-CONTEXT.md` file.
 
 ### Reservation
 
 The core process of booking a room for a guest within a specific timeframe.
 
-**Domain Concepts:**
-- **Reservation** - An agreement to reserve a room for a specific period
-- **Check-in** - The process when a guest arrives and takes possession of the room
-- **Check-out** - The process when a guest leaves and returns possession of the room
-- **No-show** - When a guest fails to arrive for a confirmed reservation
-
-**Events:**
-- `ReservationCreated` - A new reservation has been made
-- `ReservationConfirmed` - A reservation has been confirmed
-- `ReservationModified` - Details of a reservation have been changed
-- `ReservationCancelled` - A reservation has been cancelled
-- `CheckInPerformed` - A guest has checked in
-- `CheckOutPerformed` - A guest has checked out
-- `NoShowRecorded` - A guest failed to arrive for their reservation
-
-### Room
-
-Management of rooms, their categories, pricing, and availability.
-
-**Domain Concepts:**
-- **Room** - A physical space that can be reserved
-- **Room Category** - Classification of rooms (e.g., Standard, Deluxe, Suite)
-- **Room Status** - Current state of a room (e.g., available, occupied, maintenance)
-
-**Events:**
-- `RoomAdded` - A new room has been added to the hotel inventory
-- `RoomStatusChanged` - The status of a room has changed
-- `RoomCategoryChanged` - A room has been reassigned to a different category
-- `RoomPriceUpdated` - The pricing for a room has been updated
+**Key Aggregates:**
+- **Booking** - Represents a reservation agreement for a future stay
+- **Stay** - Represents an actualized booking when guests have checked in
 
 ### Guest
 
-Management of guest profiles and preferences.
+Management of guest profiles, preferences, and loyalty programs.
 
-**Domain Concepts:**
-- **Guest** - A person who stays or will stay at the hotel
-- **Guest Preferences** - Recorded preferences to enhance guest experience
+**Key Aggregates:**
+- **Guest** - A person who stays or has stayed at the hotel
+- **LoyaltyAccount** - Represents a guest's participation in the hotel's loyalty program
 
-**Events:**
-- `GuestRegistered` - A new guest has been added to the system
-- `GuestProfileUpdated` - Guest's personal information has been updated
-- `GuestPreferencesChanged` - Guest's stay preferences have been modified
+### Finance (previously Billing)
 
-### Billing
+Handling of payments, invoices, and financial operations related to bookings.
 
-Handling of payments and invoices related to reservations.
+**Key Aggregates:**
+- **Invoice** - A bill issued to a guest for services rendered
+- **Payment** - Money received from a guest
+- **PaymentPlan** - An arrangement for installment payments
 
-**Domain Concepts:**
-- **Invoice** - A document requesting payment for a reservation
-- **Payment** - Money received for a reservation
-- **Refund** - Money returned to a guest
+### Maintenance (previously Housekeeping)
 
-**Events:**
-- `InvoiceGenerated` - An invoice has been created for a reservation
-- `PaymentReceived` - A payment has been made by a guest
-- `PaymentRefunded` - Money has been returned to a guest
+Management of room cleaning, repairs, inspections, and supply management.
 
-### Housekeeping
+**Key Aggregates:**
+- **CleaningTask** - Represents room cleaning work to be performed
+- **MaintenanceTask** - Represents repair or maintenance work
+- **InspectionTask** - Represents quality verification of rooms
+- **SupplyRequest** - Represents a request for maintenance supplies
 
-Management of room cleaning and maintenance.
+### Accommodation (previously Room)
 
-**Domain Concepts:**
-- **Cleaning Request** - Request to prepare a room for new guests
-- **Maintenance Request** - Request to fix an issue in a room
+Management of rooms, their categories, features, pricing, and availability.
 
-**Events:**
-- `RoomCleaningRequested` - A request to clean a room has been created
-- `RoomCleaningCompleted` - A room has been cleaned and is ready
-- `MaintenanceRequested` - A room needs maintenance or repair
+**Key Aggregates:**
+- **Room** - An individual accommodation unit
+- **RoomType** - A category of rooms with similar characteristics
+- **SeasonalRate** - Time-specific pricing for room types
+- **Discount** - A price reduction applied to room types
 
 ## System Architecture
 
@@ -101,6 +72,84 @@ The project follows these architectural principles:
 3. **Event Sourcing**: All state changes are captured as a sequence of events
 4. **Rich Domain Model**: Domain logic encapsulated in aggregates with enforced invariants
 
+### Architecture Documentation
+
+This project uses the C4 model to document the architecture. The architecture is defined in the `workspace.dsl` file using Structurizr DSL.
+
+The C4 model provides multiple levels of abstraction:
+- **Context**: Shows the hotel system and its interactions with users and external systems
+- **Container**: Displays the bounded contexts and key infrastructure components
+- **Component**: Details the internal structure of each bounded context
+- **Dynamic Views**: Illustrates key processes like booking and check-in flows
+
+#### Visualizing the Architecture
+
+For your convenience, we've included a helper script to visualize the architecture diagrams. Simply run:
+
+```bash
+# Make the script executable if needed
+chmod +x view-architecture.sh
+
+# Run the script
+./view-architecture.sh
+```
+
+This script offers two options:
+1. Generate static diagram images you can view in any image viewer
+2. Start an interactive web viewer to explore the architecture
+
+Alternatively, you can use these approaches manually:
+
+##### Option 1: Structurizr CLI (Recommended)
+
+1. Install the Structurizr CLI:
+
+```bash
+# If you have Docker installed:
+docker pull structurizr/cli:latest
+
+# Or download the Java JAR file:
+# https://github.com/structurizr/cli/releases
+```
+
+2. Generate diagrams from the DSL file:
+
+```bash
+# Using Docker:
+docker run --rm -v $(pwd):/usr/local/structurizr structurizr/cli:latest export -workspace /usr/local/structurizr/workspace.dsl -format plantuml -output /usr/local/structurizr/diagrams
+
+# Or with the JAR file:
+java -jar structurizr-cli.jar export -workspace workspace.dsl -format plantuml -output diagrams
+```
+
+3. This will create diagram files in the `diagrams` directory that you can open with any image viewer.
+
+##### Option 2: Structurizr Lite (Local Web Interface)
+
+1. Run Structurizr Lite using Docker:
+
+```bash
+docker run -it --rm -p 8080:8080 -v $(pwd):/usr/local/structurizr structurizr/lite
+```
+
+2. Open your browser at http://localhost:8080 to view and interact with the diagrams
+
+##### Option 3: Structurizr Web Service
+
+1. Sign up for a free account on [Structurizr.com](https://structurizr.com)
+
+2. Create a new workspace and upload your DSL file
+
+3. View and edit diagrams in the web browser
+
+##### Option 4: PlantUML (Alternative Approach)
+
+1. Install PlantUML (https://plantuml.com/starting)
+
+2. Convert the Structurizr DSL to PlantUML using the Structurizr CLI
+
+3. Render the PlantUML diagrams using your preferred PlantUML viewer
+
 ### Folder Structure
 
 ```
@@ -108,27 +157,37 @@ src/
 ├── Reservation/
 │   ├── Command/
 │   ├── Query/
-│   ├── ReservationAggregate.php
-│   ├── ReservationCreated.php
-│   ├── ReservationConfirmed.php
-│   └── ...
-├── Room/
-│   ├── Command/
-│   ├── Query/
-│   ├── RoomAggregate.php
-│   ├── RoomAdded.php
+│   ├── DomainEvent/
+│   ├── Booking.php
+│   ├── Stay.php
 │   └── ...
 ├── Guest/
 │   ├── Command/
 │   ├── Query/
+│   ├── DomainEvent/
+│   ├── Guest.php
+│   ├── LoyaltyAccount.php
 │   └── ...
-├── Billing/
+├── Finance/
 │   ├── Command/
 │   ├── Query/
+│   ├── DomainEvent/
+│   ├── Invoice.php
+│   ├── PaymentPlan.php
 │   └── ...
-└── Housekeeping/
+├── Maintenance/
+│   ├── Command/
+│   ├── Query/
+│   ├── DomainEvent/
+│   ├── CleaningTask.php
+│   ├── MaintenanceTask.php
+│   └── ...
+└── Accommodation/
     ├── Command/
     ├── Query/
+    ├── DomainEvent/
+    ├── Room.php
+    ├── SeasonalRate.php
     └── ...
 ```
 
@@ -154,4 +213,4 @@ This is an educational project. Contributions that enhance its educational value
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details
